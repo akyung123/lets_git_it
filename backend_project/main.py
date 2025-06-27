@@ -12,7 +12,8 @@ import firebase_admin
 from firebase_admin import credentials, firestore, messaging
 import json
 from fastapi.concurrency import run_in_threadpool
-
+from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import tempfile
 
@@ -20,8 +21,22 @@ load_dotenv()
 
 app = FastAPI(title="Elderly Care App Backend")
 
-# IMPORTANT: Configure your credentials
-# This code assumes that the json file exists within in the project directory.
+# --- CORS SET UP --- 
+
+# This is the list of "origins" (domains) that are allowed to make requests.
+# For development, "*" allows everything, which is the easiest setup.
+# For production, you should restrict this to your Flutter app's actual domain.
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods (POST, GET, etc.)
+    allow_headers=["*"], # Allows all headers
+)
+
+# - END OF CORS SETUP -
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
@@ -30,6 +45,7 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 
 try:
+    # This code assumes that the json file exists within in the project directory.
     key_filename = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
     print(f"--- DIAGNOSTIC: Attempting to load credentials from filename: '{key_filename}' ---")
     
@@ -132,13 +148,21 @@ async def process_voice_request(
 
     # Extract information via Gemini
     try:
+        current_time = datetime.now()
+        current_time_str = current_time.strftime("%Y년 %m월 %d일, %A, %p %I:%M")
         prompt = f"""
-        Analyze the following request from an elderly person and extract the key information.
-        The user making the request is likely in Rural South Korea.
-        Respond ONLY with a valid JSON object with the following keys: "time", "locationFrom", "locationTo", "transportation_needed", "task_description".
-        If a value is not mentioned, set it to null.
+        다음은 어르신의 요청입니다. 핵심 정보를 분석해주세요.
+        요청자는 대한민국의 농촌 지역, 특히 의성군 근처에 있을 가능성이 높습니다.
+        현재 날짜는 "{current_time_str}"입니다. "내일"과 같은 상대적인 날짜를 파악하는 데 이 정보를 사용하세요.
+        
+        반드시 유효한 JSON 객체 형식으로만 응답해야 하며, 다음 키들을 포함해야 합니다: "time", "locationFrom", "locationTo", "method", "task_description".
 
-        Request: "{transcribed_text}"
+        - "time" 키에는 예상되는 전체 날짜와 시간을 ISO 8601 형식(예: "2025-06-29T14:00:00")으로 제공해주세요.
+        - "method" 키에는 사용자가 "차량"을 필요로 하는지 "걷기"(도보)으로 괜찮은지 판단하여 입력해주세요. 차를 태워달라는 요청이 있으면 "차량"로 간주합니다.
+        - method, locationFrom, locationTo, task_description의 값은 한국어로 작성해주세요.
+        - 언급되지 않은 값이 있다면, 그 값은 null로 설정해주세요.
+
+        요청: "{transcribed_text}"
         """
         # Using the corrected model name and function call
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
@@ -154,30 +178,61 @@ async def process_voice_request(
     if not db:
         raise HTTPException(status_code=500, detail="Firestore client not available.")
     
-    # Point calculation and Request saved in DB
+     # Point calculation and Request saved in DB using a Transaction
     try:
-        points = calculate_request_points(extracted_info)
+        # This is a special decorator that tells Firestore to run the function below as a single, atomic transaction.
+        @firestore.transactional
+        def create_new_request_in_transaction(transaction, request_data_to_save):
+            counter_ref = db.collection('counters').document('request_counter')
+            counter_snapshot = counter_ref.get(transaction=transaction)
+
+            # 1. Get the last used ID from our counter document.
+            last_id = counter_snapshot.get('lastId')
+            new_id_num = last_id + 1
+
+            # 2. Create the new, formatted document ID (e.g., "req011")
+            # The :03d part ensures it's always padded with leading zeros to 3 digits.
+            new_request_id_str = f"req{new_id_num:03d}"
+            
+            # 3. Create a reference to the new document in the 'requests' collection with our custom ID.
+            new_request_ref = db.collection('requests').document(new_request_id_str)
+
+            # 4. Save the new request data to that document.
+            transaction.set(new_request_ref, request_data_to_save)
+
+            # 5. Update the counter document with the new lastId.
+            transaction.update(counter_ref, {'lastId': new_id_num})
+
+            # Return the new custom ID so we can use it later.
+            return new_request_id_str
+
+        # First, prepare the data that needs to be saved.
+        points = 10
+        if extracted_info.get("method") == "vehicle":
+            points += 5
 
         request_data = {
             "requesterId": user_id,
-            "status": "pending",
+            "locationFrom": extracted_info.get("locationFrom"),
+            "locationTo": extracted_info.get("locationTo"),
+            "time": extracted_info.get("time"),
+            "status": "waiting",
+            "matchedVolunteerId": None,
+            "method": extracted_info.get("method"),
             "createdAt": firestore.SERVER_TIMESTAMP,
-            "transcribedText": transcribed_text,
-            "taskDetails": extracted_info,
             "points": points,
-            "responderId": None,
-            "reviewId": None,
         }
-        request_collection = db.collection('requests')
-        new_request_ref = request_collection.document()
-        await run_in_threadpool(new_request_ref.set, request_data)
 
-        request_id = new_request_ref.id
+        # Create a transaction object from our database client.
+        transaction = db.transaction()
+        # Run our transaction function. Firestore handles the retries and safety.
+        request_id = create_new_request_in_transaction(transaction, request_data)
+        
         print(f"Request {request_id} saved to Firestore.")
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Firestore operation failed: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=f"Firestore transaction failed: {str(e)}")
+
     # FCM Notification Module
     try:
         volunteers_ref = db.collection('users').where('role', '==', 'volunteer').stream()
