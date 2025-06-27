@@ -29,16 +29,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // login 관련 DB 확인 후, 인식번호로 로그인
     try {
-      UserCredential userCredential =
-        await
+      final QuerySnapshot = await FirebaseFirestore.instance
+          .collection('user')
+          .where('id', isEqualTo: id)
+          .limit(1)
+          .get();
+        
+      if (QuerySnapshot.docs.isNotEmpty) {
+          final userData = QuerySnapshot.docs.first.data();
+          
+        }
     }
-    DocumentSnapshot userDoc = (await FirebaseFirestore.instance
-        .collection('users')
-        .get()) as DocumentSnapshot<Object?>;
 
-    if (userDoc.exists) {
-      Map<
-    }
-  
 
 }
