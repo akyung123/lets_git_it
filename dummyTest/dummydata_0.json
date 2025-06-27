@@ -1,0 +1,342 @@
+{
+  "admin_logs": {
+    "log001": {
+      "logId": "log001",
+      "adminId": "A001",
+      "action": "approve",
+      "timestamp": "2025-06-27T10:00:00Z"
+    },
+    "log002": {
+      "logId": "log002",
+      "adminId": "A002", 
+      "action": "block",
+      "timestamp": "2025-06-27T10:05:00Z"
+    },
+    "log003": {
+      "logId": "log003",
+      "adminId": "A001",
+      "action": "view", 
+      "timestamp": "2025-06-27T10:10:00Z"
+    },
+    "log004": {
+      "logId": "log004",
+      "adminId": "A003",
+      "action": "approve",
+      "timestamp": "2025-06-27T10:15:00Z"
+    },
+    "log005": {
+      "logId": "log005",
+      "adminId": "A002",
+      "action": "delete",
+      "timestamp": "2025-06-27T10:20:00Z"
+    },
+    "log006": {
+      "logId": "log006",
+      "adminId": "A001",
+      "action": "edit",
+      "timestamp": "2025-06-27T10:25:00Z"
+    },
+    "log007": {
+      "logId": "log007",
+      "adminId": "A004",
+      "action": "approve",
+      "timestamp": "2025-06-27T10:30:00Z"
+    },
+    "log008": {
+      "logId": "log008",
+      "adminId": "A003",
+      "action": "block",
+      "timestamp": "2025-06-27T10:35:00Z"
+    },
+    "log009": {
+      "logId": "log009",
+      "adminId": "A002",
+      "action": "view",
+      "timestamp": "2025-06-27T10:40:00Z"
+    },
+    "log010": {
+      "logId": "log010",
+      "adminId": "A001",
+      "action": "approve",
+      "timestamp": "2025-06-27T10:45:00Z"
+    }
+  },
+  "requests": {
+    "req001": {
+      "requesterId": "user_001",
+      "locationFrom": "서울시 강남구 역삼동",
+      "locationTo": "서울시 강남구 삼성동",
+      "time": "2025-07-01T09:00:00Z",
+      "status": "waiting",
+      "matchedVolunteerId": null,
+      "method": "걷기",
+      "createdAt": "2025-06-27T10:00:00Z"
+    },
+    "req002": {
+      "requesterId": "user_002",
+      "locationFrom": "서울시 종로구 종로1가",
+      "locationTo": "서울시 중구 명동",
+      "time": "2025-07-01T14:30:00Z",
+      "status": "matched",
+      "matchedVolunteerId": "vol_001",
+      "method": "차량",
+      "createdAt": "2025-06-27T10:05:00Z"
+    },
+    "req003": {
+      "requesterId": "user_003",
+      "locationFrom": "부산시 해운대구 우동",
+      "locationTo": "부산시 해운대구 센텀시티",
+      "time": "2025-07-02T10:15:00Z",
+      "status": "done",
+      "matchedVolunteerId": "vol_002",
+      "method": "걷기",
+      "createdAt": "2025-06-27T10:10:00Z"
+    },
+    "req004": {
+      "requesterId": "user_004",
+      "locationFrom": "인천시 남동구 구월동",
+      "locationTo": "인천시 연수구 송도동",
+      "time": "2025-07-02T16:00:00Z",
+      "status": "waiting",
+      "matchedVolunteerId": null,
+      "method": "대중교통",
+      "createdAt": "2025-06-27T10:15:00Z"
+    },
+    "req005": {
+      "requesterId": "user_005",
+      "locationFrom": "대구시 중구 동성로",
+      "locationTo": "대구시 수성구 범어동",
+      "time": "2025-07-03T11:20:00Z",
+      "status": "matched",
+      "matchedVolunteerId": "vol_003",
+      "method": "차량",
+      "createdAt": "2025-06-27T10:20:00Z"
+    },
+    "req006": {
+      "requesterId": "user_006",
+      "locationFrom": "광주시 서구 치평동",
+      "locationTo": "광주시 북구 용봉동",
+      "time": "2025-07-03T13:45:00Z",
+      "status": "waiting",
+      "matchedVolunteerId": null,
+      "method": "걷기",
+      "createdAt": "2025-06-27T10:25:00Z"
+    },
+    "req007": {
+      "requesterId": "user_007",
+      "locationFrom": "대전시 유성구 봉명동",
+      "locationTo": "대전시 서구 둔산동",
+      "time": "2025-07-04T08:30:00Z",
+      "status": "done",
+      "matchedVolunteerId": "vol_004",
+      "method": "대중교통",
+      "createdAt": "2025-06-27T10:30:00Z"
+    },
+    "req008": {
+      "requesterId": "user_008",
+      "locationFrom": "울산시 남구 삼산동",
+      "locationTo": "울산시 중구 성남동",
+      "time": "2025-07-04T15:10:00Z",
+      "status": "matched",
+      "matchedVolunteerId": "vol_005",
+      "method": "차량",
+      "createdAt": "2025-06-27T10:35:00Z"
+    },
+    "req009": {
+      "requesterId": "user_009",
+      "locationFrom": "수원시 영통구 매탄동",
+      "locationTo": "수원시 팔달구 인계동",
+      "time": "2025-07-05T12:00:00Z",
+      "status": "waiting",
+      "matchedVolunteerId": null,
+      "method": "걷기",
+      "createdAt": "2025-06-27T10:40:00Z"
+    },
+    "req010": {
+      "requesterId": "user_010",
+      "locationFrom": "고양시 일산서구 주엽동",
+      "locationTo": "고양시 덕양구 화정동",
+      "time": "2025-07-05T17:30:00Z",
+      "status": "done",
+      "matchedVolunteerId": "vol_006",
+      "method": "대중교통",
+      "createdAt": "2025-06-27T10:45:00Z"
+    }
+  },
+  "users": {
+    "E1": {
+      "name": "김영희",
+      "id": "E1",
+      "role": true,
+      "isAdmin": false,
+      "point": 0,
+      "pointLogs": {},
+      "fcmToken": "fcm_token_001",
+      "phone": "010-1234-5678",
+      "isVerifiedVolunteer": false
+    },
+    "V1": {
+      "name": "박민수",
+      "id": "V1",
+      "role": false,
+      "isAdmin": false,
+      "point": 150,
+      "pointLogs": {
+        "pl_001": {
+          "value": 50,
+          "reason": "요청 수락 및 완료",
+          "timestamp": "2025-06-27T09:00:00Z"
+        },
+        "pl_002": {
+          "value": 50,
+          "reason": "요청 수락 및 완료",
+          "timestamp": "2025-06-27T09:30:00Z"
+        },
+        "pl_003": {
+          "value": 50,
+          "reason": "요청 수락 및 완료",
+          "timestamp": "2025-06-27T10:00:00Z"
+        }
+      },
+      "fcmToken": "fcm_token_002",
+      "phone": "010-2345-6789",
+      "isVerifiedVolunteer": true
+    },
+    "E2": {
+      "name": "이정호",
+      "id": "E2",
+      "role": true,
+      "isAdmin": false,
+      "point": 0,
+      "pointLogs": {},
+      "fcmToken": "fcm_token_003",
+      "phone": "010-3456-7890",
+      "isVerifiedVolunteer": false
+    },
+    "V2": {
+      "name": "최수진",
+      "id": "V2",
+      "role": false,
+      "isAdmin": false,
+      "point": 320,
+      "pointLogs": {
+        "pl_004": {
+          "value": 80,
+          "reason": "장거리 요청 완료",
+          "timestamp": "2025-06-27T08:00:00Z"
+        },
+        "pl_005": {
+          "value": 60,
+          "reason": "요청 수락 및 완료",
+          "timestamp": "2025-06-27T08:30:00Z"
+        },
+        "pl_006": {
+          "value": 90,
+          "reason": "긴급 요청 완료",
+          "timestamp": "2025-06-27T09:00:00Z"
+        },
+        "pl_007": {
+          "value": 90,
+          "reason": "야간 요청 완료",
+          "timestamp": "2025-06-27T09:30:00Z"
+        }
+      },
+      "fcmToken": "fcm_token_004",
+      "phone": "010-4567-8901",
+      "isVerifiedVolunteer": true
+    },
+    "A1": {
+      "name": "장관리",
+      "id": "A1",
+      "role": false,
+      "isAdmin": true,
+      "point": 0,
+      "pointLogs": {},
+      "fcmToken": "fcm_token_005",
+      "phone": "010-5678-9012",
+      "isVerifiedVolunteer": false
+    },
+    "E3": {
+      "name": "홍길동",
+      "id": "E3",
+      "role": true,
+      "isAdmin": false,
+      "point": 0,
+      "pointLogs": {},
+      "fcmToken": "fcm_token_006",
+      "phone": "010-6789-0123",
+      "isVerifiedVolunteer": false
+    },
+    "V3": {
+      "name": "안소영",
+      "id": "V3",
+      "role": false,
+      "isAdmin": false,
+      "point": 240,
+      "pointLogs": {
+        "pl_008": {
+          "value": 70,
+          "reason": "요청 수락 및 완료",
+          "timestamp": "2025-06-27T07:00:00Z"
+        },
+        "pl_009": {
+          "value": 85,
+          "reason": "복잡한 경로 요청 완료",
+          "timestamp": "2025-06-27T07:30:00Z"
+        },
+        "pl_010": {
+          "value": 85,
+          "reason": "주말 요청 완료",
+          "timestamp": "2025-06-27T08:00:00Z"
+        }
+      },
+      "fcmToken": "fcm_token_007",
+      "phone": "010-7890-1234",
+      "isVerifiedVolunteer": true
+    },
+    "E4": {
+      "name": "강대한",
+      "id": "E4",
+      "role": true,
+      "isAdmin": false,
+      "point": 0,
+      "pointLogs": {},
+      "fcmToken": "fcm_token_008",
+      "phone": "010-8901-2345",
+      "isVerifiedVolunteer": false
+    },
+    "V4": {
+      "name": "윤미래",
+      "id": "V4",
+      "role": false,
+      "isAdmin": false,
+      "point": 180,
+      "pointLogs": {
+        "pl_011": {
+          "value": 90,
+          "reason": "요청 수락 및 완료",
+          "timestamp": "2025-06-27T06:00:00Z"
+        },
+        "pl_012": {
+          "value": 90,
+          "reason": "어려운 지역 요청 완료",
+          "timestamp": "2025-06-27T06:30:00Z"
+        }
+      },
+      "fcmToken": "fcm_token_009",
+      "phone": "010-9012-3456",
+      "isVerifiedVolunteer": true
+    },
+    "A2": {
+      "name": "서관리자",
+      "id": "A2",
+      "role": false,
+      "isAdmin": true,
+      "point": 0,
+      "pointLogs": {},
+      "fcmToken": "fcm_token_010",
+      "phone": "010-0123-4567",
+      "isVerifiedVolunteer": false
+    }
+  }
+}
