@@ -12,9 +12,9 @@
 
 ======================================================================
 
-      [Flutter App] ← 사용자: 고령자, 봉사자
+            [Flutter App] ← 사용자: 고령자, 봉사자
            ↓↑             ↓
-Firebase (Auth / Firestore / FCM)   ↔   [FastAPI Server on GCP]
+      Firebase (Auth / Firestore / FCM)   ↔   [FastAPI Server on GCP]
                                  ↙︎           ↘︎
                   Google Speech-to-Text      Gemini API
 
