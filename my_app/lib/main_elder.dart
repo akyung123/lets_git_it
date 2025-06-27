@@ -7,10 +7,14 @@ import 'package:my_app/eider/screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  print("🔵 앱 시작 전");
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  print("🟢 Firebase 초기화 완료");
   await dotenv.load();
+  print("🟢 env 로드 완료");
   runApp(const MyApp());
 }
 

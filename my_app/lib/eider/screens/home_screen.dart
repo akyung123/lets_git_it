@@ -15,32 +15,54 @@ class HomeScreen extends StatefulWidget{
 class _HomeScreenState extends State<HomeScreen> {
   final AudioService _audioService = AudioService();
 
-  Future<void> handleVoiceButton() async {
-    if (!_audioService.isRecording) {
-      final granted = await _audioService.hasPermission();
-      if (!granted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('녹음 권한이 필요합니다.')),
-        );
-        return;
-      }
-
-      await _audioService.startRecording();
+ Future<void> handleVoiceButton() async {
+  if (!_audioService.isRecording) {
+    final granted = await _audioService.hasPermission();
+    if (!granted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('녹음 시작')),
+        const SnackBar(content: Text('녹음 권한이 필요합니다.')),
       );
-    } else {
-      final path = await _audioService.stopRecording();
-      await uploadWavToFastAPI(path!);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('녹음 완료 : $path')),
-      );
-      final file = await _audioService.getRecordedFile();
-      print('녹음 파일: $path (${await file?.length()} bytes)');
-
+      return;
     }
-    setState(() {});
+
+    print('[DEBUG] 녹음 시작 시도');
+    await _audioService.startRecording();
+    print('[DEBUG] 녹음 시작 완료');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('녹음 시작')),
+    );
+  } else {
+    print('[DEBUG] 녹음 중지 시도');
+    final path = await _audioService.stopRecording();
+    if (path == null) {
+      print('[ERROR] 녹음 중지 실패: path가 null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('녹음 중지 실패')),
+      );
+      return;
+    }
+
+    final file = await _audioService.getRecordedFile();
+    if (file == null || !(await file.exists())) {
+      print('[ERROR] 파일이 존재하지 않음');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('녹음 파일이 생성되지 않았습니다.')),
+      );
+      return;
+    }
+
+    print('[DEBUG] 파일 경로: $path (${await file.length()} bytes)');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('녹음 완료 : $path')),
+    );
+
+    await uploadWavToFastAPI(path);  // 전송은 마지막에
   }
+
+  setState(() {});
+}
+
 
   @override
   Widget build(BuildContext context) {
