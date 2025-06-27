@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } else {
       final path = await _audioService.stopRecording();
-      await uploadWavToFastAPI(path);
+      await uploadWavToFastAPI(path!);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('녹음 완료 : $path')),
       );
