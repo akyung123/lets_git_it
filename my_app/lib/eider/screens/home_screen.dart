@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/eider/services/upload_voice_service.dart';
@@ -52,12 +54,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     print('[DEBUG] 파일 경로: $path (${await file.length()} bytes)');
+    print('[DEBUG] 녹음 파일 존재 여부: ${await File(path).exists()}');
+    print('[DEBUG] 녹음 파일 크기: ${await File(path).length()} bytes');
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('녹음 완료 : $path')),
     );
 
-    await uploadWavToFastAPI(path);  // 전송은 마지막에
+    await uploadWavToFastAPI(path, widget.id);
   }
 
   setState(() {});

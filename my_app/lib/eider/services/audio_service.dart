@@ -13,7 +13,10 @@ class AudioService {
 
   Future<void> startRecording() async {
     final dir = await getApplicationDocumentsDirectory();
-    recordedPath = '${dir.path}/recorded_audio.wav';
+
+    // 고유한 파일명 생성 (덮어쓰기 방지, 디버깅에 도움)
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    recordedPath = '${dir.path}/recorded_audio_$timestamp.wav';
 
     await _recorder.start(
       const RecordConfig(
@@ -22,20 +25,25 @@ class AudioService {
         bitRate: 128000,
         numChannels: 1,
       ),
-      path: recordedPath!,
+      path: recordedPath!, // 지정된 경로로 녹음
     );
     isRecording = true;
   }
 
   Future<String?> stopRecording() async {
-    final path = await _recorder.stop();
+    await _recorder.stop(); // 반환된 path는 사용하지 않음
     isRecording = false;
-    recordedPath = path;
-    return path;
+
+    if (recordedPath != null && await File(recordedPath!).exists()) {
+      return recordedPath;
+    } else {
+      return null; // 존재하지 않는다면 오류 처리
+    }
   }
 
   Future<File?> getRecordedFile() async {
     if (recordedPath == null) return null;
-    return File(recordedPath!);
+    final file = File(recordedPath!);
+    return await file.exists() ? file : null;
   }
 }
