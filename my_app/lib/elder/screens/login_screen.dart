@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // login 관련 DB 확인 후, 인식번호로 로그인
     try {
       final QuerySnapshot = await FirebaseFirestore.instance
-          .collection('user')
+          .collection('users')
           .where('id', isEqualTo: id)
           .limit(1)
           .get();
