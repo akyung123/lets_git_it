@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:my_app/eider/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -45,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
 
           // Home_screen으로 이동시켜야함
-          //Navigator.push(context, MaterialPageRoute(builder: (_) => Home_screen(userId: userId))); 
+          Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen(id: userId))); 
         } else {
           // id가 없음
           ScaffoldMessenger.of(context).showSnackBar(
