@@ -5,22 +5,20 @@ const serviceAccount = require('./serviceAccountKey.json');
 const dummyData = JSON.parse(fs.readFileSync('dummydata.json', 'utf8'));
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://elderly-care-project-464204-default-rtdb.firebaseio.com'
 });
 
-const db = admin.firestore();
+const db = admin.database();
 
 async function uploadData() {
-  for (const [collectionName, documents] of Object.entries(dummyData)) {
-    const collectionRef = db.collection(collectionName); // 동적으로 컬렉션 생성
-
-    for (const [docId, docData] of Object.entries(documents)) {
-      await collectionRef.doc(docId).set(docData);
-      console.log(`Uploaded to /${collectionName}/${docId}`);
-    }
+  try {
+    // 루트에 전체 데이터 덮어쓰기
+    await db.ref('/').set(dummyData);
+    console.log('Upload to Realtime Database complete!');
+  } catch (error) {
+    console.error('Upload failed:', error);
   }
-
-  console.log('All data uploaded!');
 }
 
 uploadData();

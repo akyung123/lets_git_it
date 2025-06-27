@@ -2,68 +2,68 @@
   "admin_logs": {
     "log001": {
       "logId": "log001",
-      "adminId": "A001",
+      "adminId": "A1",
       "action": "approve",
       "timestamp": "2025-06-27T10:00:00Z"
     },
     "log002": {
       "logId": "log002",
-      "adminId": "A002", 
+      "adminId": "A2", 
       "action": "block",
       "timestamp": "2025-06-27T10:05:00Z"
     },
     "log003": {
       "logId": "log003",
-      "adminId": "A001",
+      "adminId": "A1",
       "action": "view", 
       "timestamp": "2025-06-27T10:10:00Z"
     },
     "log004": {
       "logId": "log004",
-      "adminId": "A003",
+      "adminId": "A3",
       "action": "approve",
       "timestamp": "2025-06-27T10:15:00Z"
     },
     "log005": {
       "logId": "log005",
-      "adminId": "A002",
+      "adminId": "A2",
       "action": "delete",
       "timestamp": "2025-06-27T10:20:00Z"
     },
     "log006": {
       "logId": "log006",
-      "adminId": "A001",
+      "adminId": "A1",
       "action": "edit",
       "timestamp": "2025-06-27T10:25:00Z"
     },
     "log007": {
       "logId": "log007",
-      "adminId": "A004",
+      "adminId": "A4",
       "action": "approve",
       "timestamp": "2025-06-27T10:30:00Z"
     },
     "log008": {
       "logId": "log008",
-      "adminId": "A003",
+      "adminId": "A3",
       "action": "block",
       "timestamp": "2025-06-27T10:35:00Z"
     },
     "log009": {
       "logId": "log009",
-      "adminId": "A002",
+      "adminId": "A2",
       "action": "view",
       "timestamp": "2025-06-27T10:40:00Z"
     },
     "log010": {
       "logId": "log010",
-      "adminId": "A001",
+      "adminId": "A1",
       "action": "approve",
       "timestamp": "2025-06-27T10:45:00Z"
     }
   },
   "requests": {
     "req001": {
-      "requesterId": "user_001",
+      "requesterId": "E1",
       "locationFrom": "서울시 강남구 역삼동",
       "locationTo": "서울시 강남구 삼성동",
       "time": "2025-07-01T09:00:00Z",
@@ -73,27 +73,27 @@
       "createdAt": "2025-06-27T10:00:00Z"
     },
     "req002": {
-      "requesterId": "user_002",
+      "requesterId": "E2",
       "locationFrom": "서울시 종로구 종로1가",
       "locationTo": "서울시 중구 명동",
       "time": "2025-07-01T14:30:00Z",
       "status": "matched",
-      "matchedVolunteerId": "vol_001",
+      "matchedVolunteerId": "V1",
       "method": "차량",
       "createdAt": "2025-06-27T10:05:00Z"
     },
     "req003": {
-      "requesterId": "user_003",
+      "requesterId": "E1",
       "locationFrom": "부산시 해운대구 우동",
       "locationTo": "부산시 해운대구 센텀시티",
       "time": "2025-07-02T10:15:00Z",
       "status": "done",
-      "matchedVolunteerId": "vol_002",
+      "matchedVolunteerId": "V2",
       "method": "걷기",
       "createdAt": "2025-06-27T10:10:00Z"
     },
     "req004": {
-      "requesterId": "user_004",
+      "requesterId": "E4",
       "locationFrom": "인천시 남동구 구월동",
       "locationTo": "인천시 연수구 송도동",
       "time": "2025-07-02T16:00:00Z",
@@ -103,17 +103,17 @@
       "createdAt": "2025-06-27T10:15:00Z"
     },
     "req005": {
-      "requesterId": "user_005",
+      "requesterId": "E3",
       "locationFrom": "대구시 중구 동성로",
       "locationTo": "대구시 수성구 범어동",
       "time": "2025-07-03T11:20:00Z",
       "status": "matched",
-      "matchedVolunteerId": "vol_003",
+      "matchedVolunteerId": "V3",
       "method": "차량",
       "createdAt": "2025-06-27T10:20:00Z"
     },
     "req006": {
-      "requesterId": "user_006",
+      "requesterId": "E1",
       "locationFrom": "광주시 서구 치평동",
       "locationTo": "광주시 북구 용봉동",
       "time": "2025-07-03T13:45:00Z",
@@ -123,27 +123,27 @@
       "createdAt": "2025-06-27T10:25:00Z"
     },
     "req007": {
-      "requesterId": "user_007",
+      "requesterId": "E2",
       "locationFrom": "대전시 유성구 봉명동",
       "locationTo": "대전시 서구 둔산동",
       "time": "2025-07-04T08:30:00Z",
       "status": "done",
-      "matchedVolunteerId": "vol_004",
+      "matchedVolunteerId": "V4",
       "method": "대중교통",
       "createdAt": "2025-06-27T10:30:00Z"
     },
     "req008": {
-      "requesterId": "user_008",
+      "requesterId": "E3",
       "locationFrom": "울산시 남구 삼산동",
       "locationTo": "울산시 중구 성남동",
       "time": "2025-07-04T15:10:00Z",
       "status": "matched",
-      "matchedVolunteerId": "vol_005",
+      "matchedVolunteerId": "V5",
       "method": "차량",
       "createdAt": "2025-06-27T10:35:00Z"
     },
     "req009": {
-      "requesterId": "user_009",
+      "requesterId": "E1",
       "locationFrom": "수원시 영통구 매탄동",
       "locationTo": "수원시 팔달구 인계동",
       "time": "2025-07-05T12:00:00Z",
@@ -153,12 +153,12 @@
       "createdAt": "2025-06-27T10:40:00Z"
     },
     "req010": {
-      "requesterId": "user_010",
+      "requesterId": "E4",
       "locationFrom": "고양시 일산서구 주엽동",
       "locationTo": "고양시 덕양구 화정동",
       "time": "2025-07-05T17:30:00Z",
       "status": "done",
-      "matchedVolunteerId": "vol_006",
+      "matchedVolunteerId": "V6",
       "method": "대중교통",
       "createdAt": "2025-06-27T10:45:00Z"
     }
