@@ -1,26 +1,27 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuth 추가
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:my_app/firebase_options.dart';
-import 'package:my_app/volunteer/screens/login_screen.dart';
-// TODO: 로그인 후 보여줄 메인 화면 import 추가 (예: home_screen.dart)
-// import 'package:my_app/volunteer/screens/home_screen.dart';
-
+import 'package:my_app/volunteer/screens/main_screen.dart'; // MainScreen 임포트
 
 void main() async {
-  print("--- 앱 시작: main() 함수 진입 ---");
+  print("--- 앱 시작: main() 함수 진입 (테스트 모드) ---");
   WidgetsFlutterBinding.ensureInitialized();
   print("WidgetsFlutterBinding.ensureInitialized() 완료.");
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print("Firebase.initializeApp() 완료.");
-  } catch (e) {
-    print("Firebase 초기화 오류: $e");
-    // Firebase 초기화 실패 시 사용자에게 알림을 줄 수 있는 UI를 여기에 추가
+  // Firebase 앱이 이미 초기화되었는지 확인 후 초기화
+  if (Firebase.apps.isEmpty) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      print("Firebase.initializeApp() 완료.");
+    } catch (e) {
+      print("Firebase 초기화 오류: $e");
+      // Firebase 초기화 실패 시 사용자에게 알림을 줄 수 있는 UI를 여기에 추가
+    }
+  } else {
+    print("Firebase 앱이 이미 초기화되어 있습니다. 다시 초기화하지 않습니다.");
   }
 
   try {
@@ -48,51 +49,12 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: StreamBuilder<User?>( // Firebase 인증 상태 변화 감지
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          print("StreamBuilder: ConnectionState - ${snapshot.connectionState}, HasError - ${snapshot.hasError}, HasData - ${snapshot.hasData}");
-
-          // Firebase 초기화 및 인증 상태 확인 중일 때 로딩 스피너 표시
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            print("StreamBuilder: 인증 상태 확인 중 (ConnectionState.waiting).");
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-          // 오류 발생 시
-          if (snapshot.hasError) {
-            print("StreamBuilder: Firebase Auth Stream 오류 발생: ${snapshot.error}");
-            return Scaffold(
-              body: Center(
-                child: Text('인증 오류가 발생했습니다. 앱을 다시 시작해주세요. 오류: ${snapshot.error}'),
-              ),
-            );
-          }
-          // 사용자가 로그인되어 있으면 (snapshot.hasData && snapshot.data != null)
-          // HomeScreen (메인 화면)으로 이동합니다.
-          if (snapshot.hasData && snapshot.data != null) {
-            print("StreamBuilder: 사용자 로그인됨. UID: ${snapshot.data!.uid}");
-            // TODO: 여기에 로그인 성공 후 보여줄 메인 화면 위젯을 넣어주세요.
-            // 예를 들어, return const HomeScreen();
-            return const Scaffold(
-              body: Center(
-                child: Text("로그인 완료! 메인 화면으로 이동해야 합니다. (TODO: HomeScreen 연결)"),
-              ),
-            );
-          }
-          // 로그인된 사용자가 없으면 PhoneLoginScreen으로 이동합니다.
-          print("StreamBuilder: 사용자 로그인되지 않음. PhoneLoginScreen으로 이동.");
-          return const PhoneLoginScreen();
-        },
-      ),
-      // 라우트 정의는 필요에 따라 추가하세요.
-      // routes: {
-      //   '/home': (context) => const HomeScreen(),
-      //   '/login': (context) => const PhoneLoginScreen(),
-      // },
+      // Firebase 로그인 상태 확인 없이 바로 MainScreen으로 이동
+      home: const MainScreen(),
+      routes: {
+        // 이 라우트는 이제 PhoneLoginScreen에서 직접 호출하지 않는 한 사용되지 않습니다.
+        '/tab_volunteer': (context) => const MainScreen(),
+      },
     );
   }
 }
