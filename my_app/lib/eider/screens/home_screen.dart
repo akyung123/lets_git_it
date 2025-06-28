@@ -1,9 +1,8 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:my_app/eider/services/upload_voice_service.dart';
-import '../services/audio_service.dart';
+import 'package:my_app/eider/request_viewmodel.dart';
+import 'package:my_app/eider/services/audio_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String id; // 이용자 id
@@ -15,238 +14,258 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AudioService _audioService = AudioService();
-  bool _isUploading = false; // 음성 업로드 중임을 나타내는 상태 변수 추가
+  late final RequestViewModel _requestViewModel;
 
-  Future<void> handleVoiceButton() async {
-    // 녹음 시작 로직
+  int _continuationCount = 0;
+  final int _maxAttempts = 10; // 최대 재시도 횟수
+
+  @override
+  void initState() {
+    super.initState();
+    _requestViewModel = RequestViewModel();
+    _requestViewModel.addListener(_onViewModelStateChanged);
+  }
+
+  @override
+  void dispose() {
+    _requestViewModel.removeListener(_onViewModelStateChanged);
+    _requestViewModel.dispose();
+    super.dispose();
+  }
+
+  void _onViewModelStateChanged() {
+    if (!mounted) return;
+    final state = _requestViewModel.state;
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (state == RequestState.success) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('✅ 요청이 성공적으로 접수되었습니다!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _resetRequestProcess();
+
+    } else if (state == RequestState.error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('❌ 오류 발생: ${_requestViewModel.errorMessage}'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _resetRequestProcess();
+
+    } else if (state == RequestState.incomplete) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('🔄 추가 녹음이 필요합니다. 남은 횟수: ${_maxAttempts - _continuationCount}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _resetRequestProcess() {
+    _continuationCount = 0;
+    _requestViewModel.reset();
+    if (_audioService.isRecording) {
+      _audioService.stopRecording();
+    }
+    setState(() {});
+  }
+
+  Future<void> _toggleRecording() async {
     if (!_audioService.isRecording) {
       final granted = await _audioService.hasPermission();
       if (!granted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('녹음 권한이 필요합니다.'), behavior: SnackBarBehavior.floating),
+          const SnackBar(
+            content: Text('녹음 권한이 필요합니다.'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         return;
       }
-
-      print('[DEBUG] 녹음 시작 시도');
       await _audioService.startRecording();
-      print('[DEBUG] 녹음 시작 완료');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🎤 녹음을 시작합니다.'), behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text('🎤 녹음을 시작합니다.'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
-    }
-    // 녹음 중지 및 업로드 로직
-    else {
-      print('[DEBUG] 녹음 중지 시도');
-      setState(() {
-        _isUploading = true; // 업로드 시작
-      });
-
+    } else {
       final path = await _audioService.stopRecording();
       if (path == null) {
-        print('[ERROR] 녹음 중지 실패: path가 null');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('녹음 중지 실패! 다시 시도해주세요.'), behavior: SnackBarBehavior.floating),
+          const SnackBar(
+            content: Text('녹음 파일 저장에 실패했습니다.'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-        setState(() {
-          _isUploading = false; // 업로드 실패 시 상태 초기화
-        });
         return;
       }
-
-      final file = await _audioService.getRecordedFile();
-      if (file == null || !(await file.exists())) {
-        print('[ERROR] 파일이 존재하지 않음');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('녹음 파일이 생성되지 않았습니다.'), behavior: SnackBarBehavior.floating),
-        );
-        setState(() {
-          _isUploading = false; // 업로드 실패 시 상태 초기화
-        });
-        return;
-      }
-
-      print('[DEBUG] 파일 경로: $path (${await file.length()} bytes)');
-      print('[DEBUG] 녹음 파일 존재 여부: ${await File(path).exists()}');
-      print('[DEBUG] 녹음 파일 크기: ${await File(path).length()} bytes');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ 녹음 완료! 요청을 처리 중입니다.'), behavior: SnackBarBehavior.floating),
-      );
-
-      // 음성 업로드
-      try {
-        await uploadWavToFastAPI(path, widget.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('요청이 성공적으로 전송되었습니다!'), behavior: SnackBarBehavior.floating),
-        );
-      } catch (e) {
-        print('[ERROR] 음성 업로드 실패: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('요청 전송 실패: $e'), behavior: SnackBarBehavior.floating),
-        );
-      } finally {
-        setState(() {
-          _isUploading = false; // 업로드 완료 또는 실패 시 상태 초기화
-        });
-      }
+      await _processVoiceRequest(path);
     }
-    // _audioService.isRecording 상태가 변경되었으므로 UI 업데이트
     setState(() {});
+  }
+
+  Future<void> _processVoiceRequest(String audioFilePath) async {
+    final currentState = _requestViewModel.state;
+    if (currentState == RequestState.incomplete) {
+      _continuationCount++;
+      if (_continuationCount >= _maxAttempts) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('최대 재시도 횟수를 초과했습니다. 처음부터 다시 시도해주세요.'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _resetRequestProcess();
+        return;
+      }
+      // 후속 요청 (서버 API 호출 via ApiService inside ViewModel)
+      await _requestViewModel.processContinuationRequest(widget.id, audioFilePath);
+    } else {
+      _continuationCount = 1;
+      // 최초 요청 (서버 API 호출 via ApiService inside ViewModel)
+      await _requestViewModel.processInitialRequest(widget.id, audioFilePath);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final vmState = _requestViewModel.state;
+    final isRecording = _audioService.isRecording;
+    final isLoading = vmState == RequestState.loading;
+    final isIncomplete = vmState == RequestState.incomplete;
+
+    String buttonText;
+    if (isRecording) {
+      buttonText = '녹음 중지';
+    } else if (isIncomplete) {
+      buttonText = '답변 녹음하기';
+    } else {
+      buttonText = '이동 요청하기';
+    }
+
+    String instructionText;
+    if (isLoading) {
+      instructionText = '요청을 처리 중입니다. 잠시만 기다려주세요...';
+    } else if (isRecording) {
+      instructionText = '말씀을 마친 후 다시 눌러주세요.';
+    } else if (isIncomplete) {
+      instructionText = _requestViewModel.clarificationPrompt ??
+          '추가 정보가 필요합니다. 답변을 녹음해주세요.';
+    } else {
+      instructionText = '버튼을 눌러 음성 요청을 시작하세요.';
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           '이동 요청',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24, // AppBar 제목 글자 크기 증가
-            color: Colors.white, // 제목 색상 변경
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
         ),
         centerTitle: true,
-        backgroundColor: Colors.indigo[900], // AppBar 배경색 변경
-        elevation: 0, // AppBar 그림자 제거
+        backgroundColor: Colors.indigo[900],
+        elevation: 0,
       ),
       body: Column(
         children: [
-          // '이동 요청하기' 버튼 섹션
+          // 녹음 & 요청 섹션
           Container(
-            width: double.infinity, // 가로 전체 차지
-            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 25.0), // 상하좌우 여백
-            color: Colors.indigo[800], // 섹션 배경색
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 25),
+            color: Colors.indigo[800],
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text(
-                  '음성으로 편리하게 이동을 요청하세요!',
+                Text(
+                  isIncomplete ? '추가 질문' : '음성으로 이동 요청하기',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white70,
+                    color: isIncomplete ? Colors.yellowAccent : Colors.white70,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 30),
                 SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.7, // 화면 너비의 70% 차지
-                  height: 100, // 버튼 높이 증가
+                  width: MediaQuery.of(context).size.width * 0.7,
+                  height: 100,
                   child: ElevatedButton(
-                    onPressed: _isUploading ? null : handleVoiceButton, // 업로드 중이면 버튼 비활성화
+                    onPressed: isLoading ? null : _toggleRecording,
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white, // 텍스트/아이콘 색상
-                      backgroundColor: _audioService.isRecording ? Colors.redAccent : Colors.green, // 녹음 중이면 빨강, 아니면 초록
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50), // 둥근 버튼 모양
-                      ),
-                      elevation: 8, // 버튼 그림자
+                      foregroundColor: Colors.white,
+                      backgroundColor: isRecording ? Colors.redAccent : Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                      elevation: 8,
                     ),
-                    child: _isUploading
-                        ? const CircularProgressIndicator(color: Colors.white) // 업로드 중 로딩 인디케이터
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                _audioService.isRecording ? Icons.stop : Icons.mic,
-                                size: 40, // 아이콘 크기 증가
-                              ),
+                              Icon(isRecording ? Icons.stop : Icons.mic, size: 40),
                               const SizedBox(width: 15),
-                              Text(
-                                _audioService.isRecording ? '녹음 중지' : '이동 요청하기',
-                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold), // 글자 크기 및 굵기 증가
-                              ),
+                              Text(buttonText, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                             ],
                           ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  _audioService.isRecording ? '말씀을 마친 후 다시 눌러주세요.' : '버튼을 눌러 음성으로 요청을 시작하세요.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white60,
-                  ),
+                  instructionText,
+                  style: TextStyle(fontSize: 16, color: isIncomplete ? Colors.white : Colors.white60),
                   textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 15), // 섹션 간 간격
-
-          // 요청 내역 제목
+          const SizedBox(height: 15),
+          // 요청 내역 리스트
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                '나의 요청 내역',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
+              child: Text('나의 요청 내역', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.grey[800])),
             ),
           ),
-
-          // 요청 내역 리스트 섹션
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('requests')
                   .where('requesterId', isEqualTo: widget.id)
-                  .orderBy('timestamp', descending: true) // 최신 요청이 위로 오도록 정렬 (timestamp 필드가 있다고 가정)
+                  .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  print('[ERROR] 요청 내역 스트림 오류: ${snapshot.error}');
                   return Center(
-                      child: Text(
-                    '데이터를 불러오는 중 오류가 발생했습니다: ${snapshot.error}',
-                    style: const TextStyle(fontSize: 16, color: Colors.redAccent),
-                    textAlign: TextAlign.center,
-                  ));
+                    child: Text('데이터를 불러오는 중 오류가 발생했습니다:\n${snapshot.error}', style: const TextStyle(fontSize: 16, color: Colors.redAccent), textAlign: TextAlign.center),
+                  );
                 }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                      child: Text(
-                    '아직 요청 내역이 없습니다.\n"이동 요청하기" 버튼을 눌러보세요!',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ));
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) {
+                  return const Center(child: Text('아직 요청 내역이 없습니다.\n"이동 요청하기" 버튼을 눌러보세요!', style: TextStyle(fontSize: 18, color: Colors.grey), textAlign: TextAlign.center));
                 }
-
-                final requests = snapshot.data!.docs;
-
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  itemCount: requests.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final request = requests[index].data() as Map<String, dynamic>;
-                    // Firestore 문서에 'timestamp' 필드가 없으면 현재 시간 사용 (예시)
-                    final timestamp = (request['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-                    final formattedTime = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-                    final requestDate = '${timestamp.month}/${timestamp.day}';
-                    final status = request['status'] ?? '상태 없음'; // 'status' 필드가 없을 경우 대비
-
-                    // 상태에 따라 색상과 아이콘 변경
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final ts = (data['createdAt'] as Timestamp).toDate();
+                    final formattedTime = '${ts.month}/${ts.day} ${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}';
+                    final status = (data['status'] ?? '').toString().toLowerCase();
                     Color statusColor;
                     IconData statusIcon;
                     String statusText;
-
-                    switch (status.toLowerCase()) {
-                      case 'pending':
-                        statusColor = Colors.orange[600]!;
-                        statusIcon = Icons.hourglass_empty;
-                        statusText = '매칭 대기 중';
-                        break;
+                    switch (status) {
                       case 'accepted':
                         statusColor = Colors.green[600]!;
                         statusIcon = Icons.check_circle;
@@ -263,20 +282,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         statusText = '요청 취소됨';
                         break;
                       default:
-                        statusColor = Colors.grey[600]!;
-                        statusIcon = Icons.info_outline;
-                        statusText = '알 수 없는 상태';
-                        break;
+                        statusColor = Colors.orange[600]!;
+                        statusIcon = Icons.hourglass_empty;
+                        statusText = '매칭 대기 중';
                     }
-
                     return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
-                      elevation: 4, // 카드 그림자
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       child: Padding(
-                        padding: const EdgeInsets.all(15.0),
+                        padding: const EdgeInsets.all(15),
                         child: Row(
                           children: [
                             Icon(statusIcon, size: 35, color: statusColor),
@@ -285,31 +300,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    '$statusText',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: statusColor,
-                                    ),
-                                  ),
+                                  Text(statusText, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
                                   const SizedBox(height: 5),
-                                  Text(
-                                    '요청 시각: $requestDate $formattedTime',
-                                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                                  ),
-                                  // 'destination' 필드가 있다면 추가 표시
-                                  if (request.containsKey('destination') && request['destination'] != null)
-                                    Text(
-                                      '목적지: ${request['destination']}',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                                    ),
-                                  // 'driverName' 필드가 있다면 추가 표시
-                                  if (request.containsKey('driverName') && request['driverName'] != null)
-                                    Text(
-                                      '기사님: ${request['driverName']}',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                                    ),
+                                  Text('요청 시각: $formattedTime', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                                  if (data['destination'] != null)
+                                    Text('목적지: ${data['destination']}', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                                  if (data['driverName'] != null)
+                                    Text('기사님: ${data['driverName']}', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                                 ],
                               ),
                             ),

@@ -1,11 +1,11 @@
-// lib/screens/home_screen.dart
+// lib/volunteer/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/volunteer/services/request.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userId;
-  const HomeScreen({super.key, required this.userId});
+  const HomeScreen({Key? key, this.userId}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -14,137 +14,197 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold( // HomeScreen 자체에 Scaffold를 두어 AppBar를 가질 수 있도록 합니다.
+    final query = FirebaseFirestore.instance
+        .collection('requests')
+        .where('status', isEqualTo: 'waiting')
+        .orderBy('createdAt', descending: true);
+
+    return Scaffold(
       appBar: AppBar(
-        title: const Text('경북 경산시'), // 상단 제목
+        title: const Text('경북 경산시'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // 검색 기능 구현
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // 알림 기능 구현
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              // 메뉴 기능 구현
-            },
-          ),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.menu)),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('requests').snapshots(),
+        stream: query.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('에러 발생: ${snapshot.error}'));
+            final err = snapshot.error;
+            final msg = (err is FirebaseException && err.code=='failed-precondition')
+                ? 'Firestore 인덱스를 생성해주세요.'
+                : '오류 발생: \$err';
+            return Center(child: Text(msg, textAlign: TextAlign.center));
           }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('요청이 없습니다.'));
+          final docs = snapshot.data?.docs;
+          if (docs == null || docs.isEmpty) {
+            return const Center(child: Text('대기 중인 요청이 없습니다.'));
           }
-
-          final requests = snapshot.data!.docs.map((doc) => Request.fromFirestore(doc)).toList();
-
+          final requests = docs.map((d) => Request.fromFirestore(d)).toList();
           return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             itemCount: requests.length,
-            itemBuilder: (context, index) {
-              final request = requests[index];
-              return RequestCard(request: request);
-            },
+            itemBuilder: (context, index) => RequestCard(
+              request: requests[index],
+              userId: widget.userId,
+            ),
           );
         },
       ),
-      // HomeScreen에서는 BottomNavigationBar를 제거합니다. MainScreen에서 관리합니다.
     );
   }
 }
 
-// 개별 요청 카드를 위한 위젯 (변경 없음)
 class RequestCard extends StatelessWidget {
   final Request request;
+  final String? userId;
+  const RequestCard({Key? key, required this.request, this.userId}) : super(key: key);
 
-  const RequestCard({super.key, required this.request});
+  Future<void> _join(BuildContext ctx) async {
+    if (userId == null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('사용자 정보가 없습니다.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    try {
+      await FirebaseFirestore.instance
+          .collection('requests')
+          .doc(request.id)
+          .update({'status': 'done', 'matchedVolunteerId': userId});
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('참여되었습니다!'), backgroundColor: Colors.blue),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('오류 발생: \$e'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // 올바른 문자열 보간 사용
+    final dist = (1 + (request.id!.hashCode % 5)).toStringAsFixed(1);
+    final pts = (10 + (request.id!.hashCode % 30)).toString();
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      elevation: 2.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 왼쪽 지도 및 핀 아이콘 (임시)
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.blue[100],
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: const Icon(Icons.map, size: 50, color: Colors.blue),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RequestDetailScreen(request: request, userId: userId),
             ),
-            const SizedBox(width: 16.0),
-            // 가운데 요청 정보
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.person, size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        '경북 경산시',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      Text('${(1 + (request.id!.hashCode % 5)).toStringAsFixed(1)}km',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ],
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.map, size: 40, color: Colors.blue),
                   ),
-                  const SizedBox(height: 8.0),
-                  Text('요청일: ${request.createdAt.toLocal().toString().split(' ')[0]}'),
-                  Text('시간: ${request.time.toLocal().hour}시 ${request.time.toLocal().minute}분'),
-                  Text('방법: ${request.method}'),
-                  Text('출발: ${request.locationFrom}'),
-                  Text('도착: ${request.locationTo}'),
-                  Text('상태: ${request.status}'),
-                  Text('${(10 + (request.id!.hashCode % 30))} pt',
-                    style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('$dist km',
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text('$pts pt',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700])),
+                        const Icon(Icons.arrow_forward_ios, size: 18),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8.0),
-            // 오른쪽 화살표 및 더보기 아이콘
-            Column(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () {
-                    // 더보기 메뉴 기능 구현
-                  },
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF67B5ED), // 버튼 색 변경
+                  ),
+                  onPressed: () => _join(context),
+                  child: const Text('참여'),
                 ),
-                const SizedBox(height: 10),
-                const Icon(Icons.arrow_forward),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+class RequestDetailScreen extends StatelessWidget {
+  final Request request;
+  final String? userId;
+  const RequestDetailScreen({Key? key, required this.request, this.userId}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final date = request.createdAt.toLocal().toString().split(' ')[0];
+    final hour = request.time.toLocal().hour.toString().padLeft(2, '0');
+    final minute = request.time.toLocal().minute.toString().padLeft(2, '0');
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('요청 상세 정보')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('요청일'),
+            subtitle: Text(date),
+          ),
+          ListTile(
+            leading: const Icon(Icons.access_time),
+            title: const Text('시간'),
+            subtitle: Text('$hour:$minute'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.directions_car),
+            title: const Text('방법'),
+            subtitle: Text(request.method),
+          ),
+          ListTile(
+            leading: const Icon(Icons.location_on),
+            title: const Text('출발지'),
+            subtitle: Text(request.locationFrom),
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag),
+            title: const Text('도착지'),
+            subtitle: Text(request.locationTo),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
