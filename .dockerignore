@@ -1,0 +1,10 @@
+# .dockerignore
+
+Dockerfile
+.dockerignore
+.gitignore
+.git
+__pycache__/
+*.pyc
+.env
+gcp-service-account.json

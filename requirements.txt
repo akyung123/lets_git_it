@@ -27,6 +27,7 @@ google-resumable-media==2.7.2
 googleapis-common-protos==1.70.0
 grpcio==1.73.1
 grpcio-status==1.71.0
+gunicorn==23.0.0
 h11==0.16.0
 h2==4.2.0
 hpack==4.1.0
@@ -44,6 +45,7 @@ mdurl==0.1.2
 msgpack==1.1.1
 norminette==3.3.55
 orjson==3.10.18
+packaging==25.0
 proto-plus==1.26.1
 protobuf==5.29.5
 pyasn1==0.6.1

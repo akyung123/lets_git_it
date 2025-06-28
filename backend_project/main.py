@@ -14,6 +14,7 @@ import json
 from fastapi.concurrency import run_in_threadpool
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
+from google.cloud.firestore_v1.base_query import FieldFilter
 import shutil
 import tempfile
 import uuid
@@ -44,17 +45,19 @@ GOOGLE_PROJECT_ID = None
 db = None
 genai_is_configured = False
 
+# CORRECT INITIALIZATION FOR CLOUD RUN DEPLOYMENT
 try:
-    # Configure Gemini
-    if not GEMINI_API_KEY:
-        # This will now print to logs instead of crashing the server
-        print("CRITICAL ERROR: GEMINI_API_KEY environment variable not found.")
-    else:
-        genai.configure(api_key=GEMINI_API_KEY)
-        genai_is_configured = True
-        print("Gemini SDK configured successfully.")
+    # 1. Configure Gemini
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise RuntimeError("CRITICAL ERROR: GEMINI_API_KEY secret was not loaded.")
+    genai.configure(api_key=gemini_api_key)
+    genai_is_configured = True
+    print("Gemini SDK configured successfully.")
 
-    # Initialize Firebase
+    # 2. Initialize Firebase
+    # On Cloud Run, this automatically finds the credentials
+    # provided by the --set-secrets flag. No file path is needed.
     firebase_admin.initialize_app()
     db = firestore.client()
     GOOGLE_PROJECT_ID = db.project
@@ -259,32 +262,51 @@ async def process_voice_request(
             
             print(f"Request {request_id} saved to Firestore.")
 
-            # FCM Notification Module
             try:
-                volunteers_ref = db.collection('users').where('role', '==', 'volunteer').stream()
+                # This part remains the same: get all volunteer tokens
+                volunteers_ref = db.collection('users').where(filter=FieldFilter('role', '==', 'volunteer')).stream()
                 registration_tokens = []
                 for volunteer in volunteers_ref:
                     volunteer_data = volunteer.to_dict()
                     if volunteer_data.get('fcmToken'):
                         registration_tokens.append(volunteer_data['fcmToken'])
+
+                # This is the new logic
                 if registration_tokens:
-                    message = messaging.MulticastMessage(
-                        notification=messaging.Notification(
-                            title="New Help Request!",
-                            body=f"A new request is available: {transcribed_text[:50]}..."
-                        ),
-                        data={
-                            'requestId': request_id,
-                            'click_action': 'FLUTTER_NOTIFICATION_CLICK'
-                        },
-                        tokens=registration_tokens,
-                    )
-                    response = messaging.send_multicast(message)
-                    print(f'{response.success_count} messages were sent successfully')
-            
+                    print(f"Found {len(registration_tokens)} volunteers. Sending notifications individually.")
+                    success_count = 0
+                    failure_count = 0
+
+                    # Loop through each token and send a message
+                    for token in registration_tokens:
+                        # We put the send logic in its own try/except block.
+                        # This ensures that if one token is bad, it won't crash the whole loop.
+                        try:
+                            message = messaging.Message(
+                                notification=messaging.Notification(
+                                    title="새로운 도움 요청!", # "New Help Request!"
+                                    body=f"새로운 요청이 접수되었습니다: {transcribed_text[:50]}..." # "A new request has been received..."
+                                ),
+                                data={
+                                    'requestId': request_id,
+                                    'click_action': 'FLUTTER_NOTIFICATION_CLICK'
+                                },
+                                token=token, # Use the individual token here
+                            )
+                            # Use the send() function that we proved works
+                            messaging.send(message)
+                            success_count += 1
+                        except Exception as e:
+                            failure_count += 1
+                            # Log the error for the specific failing token
+                            print(f"Failed to send to one token. Error: {e}")
+                    
+                    print(f"FCM sending complete. Successes: {success_count}, Failures: {failure_count}")
+
             except Exception as e:
-                print(f"An error occurred sending FCM notifications: {str(e)}")
-        
+                # This outer block catches larger errors, like failing to get the volunteers list
+                print(f"A critical error occurred during the FCM process: {str(e)}")
+
             return {
                 "status": "success",
                 "request_id": request_id,
