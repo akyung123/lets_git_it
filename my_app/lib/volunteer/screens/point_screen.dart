@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuth는 직접 사용되지 않지만, 다른 연관 로직에 필요할 수 있으므로 유지.
+// FirebaseAuth는 직접 사용되지 않지만, 다른 연관 로직에 필요할 수 있으므로 유지.
 
 class PointScreen extends StatefulWidget {
   final String? userId; // MainScreen으로부터 전달받을 사용자 ID
@@ -90,7 +90,7 @@ class _PointScreenState extends State<PointScreen> {
           : CustomScrollView( // 스크롤 가능하도록 CustomScrollView 사용
               slivers: [
                 SliverAppBar(
-                  expandedHeight: 200.0, // AppBar의 확장된 높이
+                  expandedHeight: 230.0, // AppBar의 확장된 높이
                   floating: true, // 스크롤 시 AppBar가 나타나게 함
                   pinned: true, // 스크롤 시 AppBar가 상단에 고정되게 함
                   backgroundColor: const Color(0xFF67B5ED), // 사진의 하늘색 계열
@@ -113,16 +113,7 @@ class _PointScreenState extends State<PointScreen> {
                   ],
                   flexibleSpace: FlexibleSpaceBar(
                     centerTitle: true,
-                    titlePadding: const EdgeInsets.only(bottom: 16.0), // 타이틀 아래 여백
-                    title: const Text(
-                      'Point',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    // 상단 포인트 카드 부분
+                      // 상단 포인트 카드 부분
                     background: Padding(
                       padding: const EdgeInsets.only(top: kToolbarHeight + 10, left: 16, right: 16, bottom: 0),
                       child: Align(

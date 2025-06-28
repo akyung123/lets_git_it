@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'firebase_options.dart';
+import '../firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/eider/screens/login_screen.dart';
 
@@ -9,9 +9,20 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   print("🔵 앱 시작 전");
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  if (Firebase.apps.isEmpty) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      print("Firebase.initializeApp() 완료.");
+    } catch (e) {
+      print("Firebase 초기화 오류: $e");
+      // Firebase 초기화 실패 시 사용자에게 알림을 줄 수 있는 UI를 여기에 추가
+    }
+  } else {
+    print("Firebase 앱이 이미 초기화되어 있습니다. 다시 초기화하지 않습니다.");
+  }
+
   print("🟢 Firebase 초기화 완료");
   await dotenv.load();
   print("🟢 env 로드 완료");
