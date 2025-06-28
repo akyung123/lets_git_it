@@ -47,3 +47,11 @@ cd backend-project
 
 uvicorn main:app --reload
 
+6. In order to run the update the cloud server run the following:
+
+gcloud run deploy elderly-care-backend \
+--source . \
+--platform managed \
+--region us-central1 \
+--allow-unauthenticated \
+--set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
