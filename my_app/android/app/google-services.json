@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "389318188928",
-    "project_id": "test-73377",
-    "storage_bucket": "test-73377.firebasestorage.app"
+    "project_number": "8216020119",
+    "firebase_url": "https://elderly-care-project-464204-default-rtdb.firebaseio.com",
+    "project_id": "elderly-care-project-464204",
+    "storage_bucket": "elderly-care-project-464204.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:389318188928:android:e344e2cd39a9721bd72b65",
+        "mobilesdk_app_id": "1:8216020119:android:963288bc109225f125d5d2",
         "android_client_info": {
           "package_name": "com.example.my_app"
         }
@@ -15,26 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAbehx5HT3OSMdcQ9YVFBPsnI0zxUH-5lw"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:389318188928:android:65ed308c01698be2d72b65",
-        "android_client_info": {
-          "package_name": "com.example.myapp"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAbehx5HT3OSMdcQ9YVFBPsnI0zxUH-5lw"
+          "current_key": "AIzaSyC7to8vnpfE0SoICr0aKjS6zpxAyh9-p-8"
         }
       ],
       "services": {
