@@ -22,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _fetchUserProfile() async {
+    // userId가 null이면 프로필 정보를 가져올 수 없음
     if (widget.userId == null) {
       print("ProfileScreen: 사용자 ID가 null입니다. 프로필 정보를 가져올 수 없습니다.");
       setState(() {
@@ -31,28 +32,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
+      // 'users' 컬렉션에서 해당 userId의 문서 가져오기
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
           .get();
 
       if (userDoc.exists) {
+        // 문서가 존재하면 데이터 설정
         setState(() {
           _userData = userDoc.data() ?? {};
           _isLoading = false;
         });
         print("ProfileScreen: 사용자 ${widget.userId}의 프로필 정보 로드 완료.");
       } else {
+        // 사용자 문서가 존재하지 않을 경우
         print("ProfileScreen: 사용자 문서가 Firestore에 존재하지 않습니다: ${widget.userId}");
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
+      // 데이터 로드 중 오류 발생 시 처리
       print("ProfileScreen: 프로필 정보 로드 중 오류 발생: $e");
       setState(() {
         _isLoading = false;
       });
+      // 위젯이 마운트된 상태인지 확인 후 SnackBar 표시
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('프로필 정보를 불러오는 데 실패했습니다: $e')),
@@ -64,14 +70,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // 로그아웃 함수
   Future<void> _logout() async {
     try {
-      await FirebaseAuth.instance.signOut();
+      await FirebaseAuth.instance.signOut(); // Firebase에서 로그아웃
       print("ProfileScreen: 로그아웃 성공!");
-      // 로그아웃 후 로그인 화면으로 이동 (main.dart의 StreamBuilder가 자동으로 처리)
-      // 또는 명시적으로 pushAndRemoveUntil을 사용할 수도 있습니다.
+      // 로그아웃 후 로그인 화면으로 이동 (대부분 main.dart의 StreamBuilder가 처리)
+      // 또는 명시적으로 라우팅을 통해 로그인 화면으로 이동할 수 있습니다.
       // 예: Navigator.of(context).pushAndRemoveUntil(
-      //       MaterialPageRoute(builder: (context) => const PhoneLoginScreen()),
-      //       (Route<dynamic> route) => false,
-      //     );
+      //          MaterialPageRoute(builder: (context) => const PhoneLoginScreen()),
+      //          (Route<dynamic> route) => false,
+      //      );
     } catch (e) {
       print("ProfileScreen: 로그아웃 실패: $e");
       if (mounted) {
@@ -85,90 +91,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[200], // 배경색을 회색으로 변경 (이미지와 유사하게)
       appBar: AppBar(
-        title: const Text('프로필 화면'),
-        actions: [
-          // 로그아웃 버튼을 여기에 추가합니다.
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: '로그아웃',
+        backgroundColor: Colors.grey[200], // 앱바 배경색도 회색으로 설정
+        elevation: 0, // 앱바 그림자 제거
+        title: const Text(
+          '내 정보',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        centerTitle: false, // 제목 왼쪽 정렬
+        actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchUserProfile, // 새로고침 버튼
+            icon: const Icon(Icons.settings, color: Colors.black), // 설정 아이콘
+            onPressed: () {
+              // TODO: 설정 화면으로 이동 로직
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('설정 기능 (구현 예정)')),
+              );
+            },
           ),
         ],
       ),
-      body: _isLoading
+      body: _isLoading // 데이터 로딩 중이면 로딩 인디케이터 표시
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView( // 내용이 많아질 경우 스크롤 가능하도록
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '현재 사용자 ID: ${widget.userId ?? "알 수 없음"}',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 20),
+                  // --- 사용자 정보 카드 섹션 ---
                   Card(
-                    elevation: 4,
+                    elevation: 1,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _buildProfileRow('이름', _userData['name'] ?? '설정되지 않음'),
-                          _buildProfileRow('전화번호', _userData['phone'] ?? '설정되지 않음'),
-                          _buildProfileRow('역할', (_userData['role'] ?? false) ? '자원봉사자' : '일반 사용자'),
-                          _buildProfileRow('관리자 여부', (_userData['isAdmin'] ?? false) ? '예' : '아니오'),
-                          _buildProfileRow('인증된 봉사자 여부', (_userData['isVerifiedVolunteer'] ?? false) ? '예' : '아니오'),
-                          // 필요한 다른 프로필 정보들을 추가하세요.
+                          // 프로필 아이콘 (원형)
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Colors.grey[300], // 아이콘 배경색
+                            child: const Icon(Icons.person, size: 40, color: Colors.black54), // 사람 아이콘
+                          ),
+                          const SizedBox(width: 15),
+                          // 사용자 이름, 나이, 주소
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _userData['name'] ?? '이름 미설정', // '이름' 필드
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  // 'age' 필드가 있다면 사용, 없으면 '정보 없음'
+                                  _userData['age'] != null ? '${_userData['age']}세' : '나이 정보 없음',
+                                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                ),
+                                Text(
+                                  // 'address' 필드가 있다면 사용, 없으면 '정보 없음'
+                                  _userData['address'] ?? '주소 정보 없음',
+                                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18), // 화살표 아이콘
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: 프로필 편집 화면으로 이동하는 로직 추가
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('프로필 편집 기능 (구현 예정)')),
-                        );
-                      },
-                      child: const Text('프로필 편집'),
+                  const SizedBox(height: 16), // 카드 사이 간격
+
+                  // --- 두 번째 빈 카드 섹션 ---
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    child: const SizedBox(
+                      height: 120, // 임시 높이
+                      width: double.infinity, // 가로로 꽉 채우기
+                      child: Center(
+                        // 이 부분에 원하는 내용 추가 (예: 포인트, 알림 등)
+                        child: Text('여기에 다른 정보나 기능 추가'),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 16), // 카드 사이 간격
+
+                  // --- 세 번째 빈 카드 섹션 (더 길게) ---
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    child: const SizedBox(
+                      height: 200, // 임시 높이
+                      width: double.infinity, // 가로로 꽉 채우기
+                      child: Center(
+                        // 이 부분에 원하는 내용 추가 (예: 내가 쓴 글, 활동 내역 등)
+                        child: Text('여기에 더 많은 정보나 기능 추가'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // --- 로그아웃 및 새로고침 버튼 (카드 형태로) ---
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.refresh, color: Colors.blue),
+                          title: const Text('프로필 새로고침'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                          onTap: _fetchUserProfile, // 새로고침 기능 연결
+                        ),
+                        const Divider(height: 0, indent: 16, endIndent: 16), // 구분선
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text('로그아웃'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                          onTap: _logout, // 로그아웃 기능 연결
+                        ),
+                      ],
+                    ),
+                  ),
+                  // TODO: 프로필 편집 버튼은 이와 유사한 방식으로 다른 카드 섹션에 배치하거나, 프로필 정보 카드 onTap에 연결할 수 있습니다.
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _buildProfileRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
