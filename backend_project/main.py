@@ -205,14 +205,17 @@ async def process_voice_request(
         current_time = datetime.now()
         current_time_str = current_time.strftime("%Y년 %m월 %d일, %A, %p %I:%M")
         prompt = f"""
+        당신은 오직 주어진 텍스트만을 기반으로 정보를 추출하는 고도로 정밀한 비서입니다.
+        절대 추측하거나 정보를 창작해서는 안 됩니다.
         다음은 어르신의 요청입니다. 핵심 정보를 분석해주세요.
-        요청자는 대한민국의 농촌 지역, 특히 의성군 근처에 있을 가능성이 높습니다.
+
+        **지시사항**
         현재 날짜는 "{current_time_str}"입니다. "내일"과 같은 상대적인 날짜를 파악하는 데 이 정보를 사용하세요.
-        
         반드시 유효한 JSON 객체 형식으로만 응답해야 하며, 다음 키들을 포함해야 합니다: "time", "locationFrom", "locationTo", "method", "task_description".
 
-        - "time" 키에는 예상되는 전체 날짜와 시간을 ISO 8601 형식(예: "2025-06-29T14:00:00")으로 제공해주세요.
-        - "method" 키에는 사용자가 "차량"을 필요로 하는지 "걷기"(도보)으로 괜찮은지 판단하여 입력해주세요. 차를 태워달라는 요청이 있으면 "차량"로 간주합니다.
+        - "time" 키에는 예상되는 전체 날짜와 시간을 ISO 8601 형식(예: "YYYY-MM-DDTHH:MM:SS")으로 제공해주세요.
+        주의: 예를 제공하는 것이 아니라 {current_time_str} 을 이용해 예의 포맷에 맞게 바꿔주세요! 또한 "time" 키에는 현재날짜 {current_time_str} 보다 과거의 날짜가 들어가면 안됩니다!
+        - "method" 키에는 사용자가 "차량"을 필요로 하는지 "걷기"(도보)으로 가는지 요청을 정확히 판단하여 입력해주세요. 차를 태워달라는 요청이 있으면 "차량"로 간주합니다.
         - method, locationFrom, locationTo, task_description의 값은 한국어로 작성해주세요.
         - 언급되지 않은 값이 있다면, 그 값은 null로 설정해주세요.
 
@@ -446,6 +449,8 @@ async def continue_voice_request(
         
         # This prompt gives Gemini the full context
         prompt = f"""
+        당신은 오직 주어진 텍스트만을 기반으로 정보를 추출하는 고도로 정밀한 비서입니다.
+        절대 추측하거나 정보를 창작해서는 안 됩니다.
         다음은 사용자와의 대화 내용입니다. 기존 정보를 바탕으로 새로운 정보를 통합하여 JSON 객체를 완성해주세요.
         현재 날짜는 "{current_time_str}"입니다.
         
@@ -453,8 +458,14 @@ async def continue_voice_request(
         지금까지 수집된 정보: {json.dumps(partial_info, ensure_ascii=False)}
         사용자의 추가 응답: "{new_transcribed_text}"
         
-        위 정보를 모두 종합하여 다음 JSON 객체를 완성해주세요.
+        **지시사항**
+        현재 날짜는 "{current_time_str}"입니다. "내일"과 같은 상대적인 날짜를 파악하는 데 이 정보를 사용하세요.
         반드시 유효한 JSON 객체 형식으로만 응답해야 하며, 다음 키들을 포함해야 합니다: "time", "locationFrom", "locationTo", "method", "task_description".
+
+        - "time" 키에는 예상되는 전체 날짜와 시간을 ISO 8601 형식(예: "YYYY-MM-DDTHH:MM:SS")으로 제공해주세요.
+        주의: 예를 제공하는 것이 아니라 {current_time_str} 을 이용해 예의 포맷에 맞게 바꿔주세요!
+        - "method" 키에는 사용자가 "차량"을 필요로 하는지 "걷기"(도보)으로 가는지 요청을 정확히 판단하여 입력해주세요. 차를 태워달라는 요청이 있으면 "차량"로 간주합니다.
+        - method, locationFrom, locationTo, task_description의 값은 한국어로 작성해주세요.
         - 언급되지 않은 값이 있다면, 그 값은 null로 설정해주세요.
         """
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
@@ -472,11 +483,8 @@ async def continue_voice_request(
     missing_fields = [field for field in required_fields if not updated_info.get(field)]
 
     if not missing_fields:
-        # --- COMPLETE: Save to DB and delete pending request ---
+        # Save to DB and delete pending request ---
         try:
-            # You already have the transactional function defined in the global scope
-            # so we can reuse it directly.
-            
             # Prepare the final request data from the 'updated_info'
             points = calculate_request_points(updated_info)
 
@@ -493,36 +501,50 @@ async def continue_voice_request(
             }
 
             transaction = db.transaction()
-            # The function `create_new_request_in_transaction` is defined at the top-level
-            # of our file, so we can call it here.
             request_id = create_new_request_in_transaction(transaction, final_request_data)
             
             print(f"Request {request_id} finalized.")
             
-            # (Optional but good to have) Also send the final FCM notification here
             try:
-                # This is the same FCM logic from the first endpoint
-                volunteers_ref = db.collection('users').where('role', '==', 'volunteer').stream()
+                # This part remains the same: get all volunteer tokens
+                volunteers_ref = db.collection('users').where(filter=FieldFilter('role', '==', 'volunteer')).stream()
                 registration_tokens = []
                 for volunteer in volunteers_ref:
                     volunteer_data = volunteer.to_dict()
                     if volunteer_data.get('fcmToken'):
                         registration_tokens.append(volunteer_data['fcmToken'])
+
                 if registration_tokens:
-                    # Note: We can use the combined transcript for a better notification
-                    full_transcript = f"{original_transcript}. {new_transcribed_text}"
-                    message = messaging.MulticastMessage(
-                        notification=messaging.Notification(
-                            title="New Help Request!",
-                            body=f"A new request is available: {full_transcript[:50]}..."
-                        ),
-                        data={ 'requestId': request_id, 'click_action': 'FLUTTER_NOTIFICATION_CLICK' },
-                        tokens=registration_tokens,
-                    )
-                    response = messaging.send_multicast(message)
-                    print(f'{response.success_count} messages were sent successfully')
+                    print(f"Found {len(registration_tokens)} volunteers. Sending notifications individually.")
+                    success_count = 0
+                    failure_count = 0
+
+                    for token in registration_tokens:
+                        try:
+                            message = messaging.Message(
+                                notification=messaging.Notification(
+                                    title="새로운 도움 요청!", # "New Help Request!"
+                                    body=f"새로운 요청이 접수되었습니다: {cleaned_response_text[:50]}..." # "A new request has been received..."
+                                ),
+                                data={
+                                    'requestId': request_id,
+                                    'click_action': 'FLUTTER_NOTIFICATION_CLICK'
+                                },
+                                token=token, # Use the individual token here
+                            )
+                            # Use the send() function that we proved works
+                            messaging.send(message)
+                            success_count += 1
+                        except Exception as e:
+                            failure_count += 1
+                            # Log the error for the specific failing token
+                            print(f"Failed to send to one token. Error: {e}")
+                    
+                    print(f"FCM sending complete. Successes: {success_count}, Failures: {failure_count}")
+
             except Exception as e:
-                print(f"An error occurred sending FCM notifications on finalized request: {str(e)}")
+                # This outer block catches larger errors, like failing to get the volunteers list
+                print(f"A critical error occurred during the FCM process: {str(e)}")
             
             pending_ref.delete()
             print(f"Pending request {pending_request_id} deleted")
