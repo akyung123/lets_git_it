@@ -266,12 +266,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     IconData statusIcon;
                     String statusText;
                     switch (status) {
-                      case 'accepted':
+                      case 'matched':
                         statusColor = Colors.green[600]!;
                         statusIcon = Icons.check_circle;
                         statusText = '기사님 매칭 완료';
                         break;
-                      case 'completed':
+                      case 'done':
                         statusColor = Colors.blue[600]!;
                         statusIcon = Icons.done_all;
                         statusText = '이동 완료';
@@ -302,11 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Text(statusText, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
                                   const SizedBox(height: 5),
-                                  Text('요청 시각: $formattedTime', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                                   if (data['destination'] != null)
-                                    Text('목적지: ${data['destination']}', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                                   if (data['driverName'] != null)
-                                    Text('기사님: ${data['driverName']}', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                                 ],
                               ),
                             ),

@@ -74,7 +74,7 @@ class ApiService {
   }) {
     print("✅ [ApiService] Preparing continuation voice request.");
     return _sendVoiceRequest(
-      endpoint: '/request/voice', // 동일한 엔드포인트를 사용
+      endpoint: '/request/voice/continue',
       userId: userId,
       audioFilePath: audioFilePath,
       pendingRequestId: pendingRequestId,

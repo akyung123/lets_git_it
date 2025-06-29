@@ -76,7 +76,7 @@ class RequestCard extends StatelessWidget {
       await FirebaseFirestore.instance
           .collection('requests')
           .doc(request.id)
-          .update({'status': 'done', 'matchedVolunteerId': userId});
+          .update({'status': 'matched', 'matchedVolunteerId': userId});
       ScaffoldMessenger.of(ctx).showSnackBar(
         const SnackBar(content: Text('참여되었습니다!'), backgroundColor: Colors.blue),
       );
